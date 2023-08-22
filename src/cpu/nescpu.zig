@@ -16,15 +16,38 @@
 
 const std = @import("std");
 
-const status = packed struct(u8) {
-    carry: bool = false,
-    zero: bool = false,
-    interrupt: bool = false,
-    decimal: bool = false,
-    brk: bool = false,
-    reserved: bool = false,
-    overflow: bool = false,
-    negative: bool = false,
+pub const status = packed struct(u8) {
+    carry: bool,
+    zero: bool,
+    interrupt: bool,
+    decimal: bool,
+    brk: bool,
+    reserved: bool,
+    overflow: bool,
+    negative: bool,
+
+    pub fn fromInt(num: u8) status {
+        return @bitCast(num);
+    }
+
+    pub fn toInt(s: status) u8 {
+        return @bitCast(s);
+    }
+};
+
+const ByteWordTag = enum {
+    byte,
+    word,
+};
+
+const ByteOrWord = union(ByteWordTag) {
+    byte: u8,
+    word: u16,
+};
+
+const addrValPair = struct {
+    addr: ByteOrWord,
+    val: u8,
 };
 
 const addrMode = enum {
@@ -44,399 +67,223 @@ const addrMode = enum {
     zroY,
 };
 
-const nescpu = struct {
-    pc: u16 = 0,
-    sp: u8 = 0,
-    a: u8 = 0,
-    x: u8 = 0,
-    y: u8 = 0,
-    s: status = .{},
-    mem: [64 * 1024]u8 = std.mem.zeroes([64 * 1024]u8),
-    cycles: u16 = 0,
+pub fn nesCpu() type {
+    return struct {
+        pc: u16,
+        sp: u8,
+        a: u8,
+        x: u8,
+        y: u8,
+        s: status,
+        cycles: u8,
+        mem: [64 * 1024]u8,
+        currAddrMode: addrMode,
+        addrTable: [256]addrMode = [256]addrMode{
+            //  +00            +01            +02            +03            +04             +05           +06            +07             +08            +09            +0A            +0B            +0C            +0D            +0E            +0F
+            addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 00
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 01
+            addrMode.absl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 20
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 30
+            addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 40
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 50
+            addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.indi, addrMode.absl, addrMode.absl, addrMode.absl, // 60
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 70
+            addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 80
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 90
+            addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // A0
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // B0
+            addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // C0
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // D0
+            addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // E0
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // F0
+        },
 
-    fn memFetch(self: *nescpu) u8 {
-        const data = self.mem[self.pc];
-        self.pc += 1;
-        self.cycles += 1;
-
-        return data;
-    }
-
-    fn fetchImmediate(self: *nescpu) u8 {
-        return self.memFetch();
-    }
-
-    inline fn setZeroNegative(self: *nescpu, register: u8) void {
-        if (register == 0) {
-            self.s.zero = true;
-        } else if ((register & 0x80) == 0x80) {
-            self.s.negative = true;
+        pub fn init(PC: u16, SP: u8, A: u8, X: u8, Y: u8, S: u8) @This() {
+            return .{
+                .pc = PC,
+                .sp = SP,
+                .a = A,
+                .x = X,
+                .y = Y,
+                .s = status.fromInt(S),
+                .cycles = 0,
+                .mem = undefined,
+                .currAddrMode = addrMode.none,
+            };
         }
-    }
 
-    fn ADC(self: *nescpu) void {
-        const val = self.memFetch();
-        const res = @as(u16, self.a) + @as(u16, val) + @intFromBool(self.s.carry);
+        pub fn memFetchByte(self: *@This()) u8 {
+            const data = self.mem[self.pc];
+            self.pc +%= 1;
+            self.cycles += 1;
 
-        self.a = @as(u8, @truncate(res));
-
-        if (res > 0xFF) {
-            self.s.carry = true;
+            return data;
         }
 
-        if ((~(self.a ^ val) & (self.a ^ res) & 0x80) != 0) {
-            self.s.overflow = true;
+        fn memFetchWord(self: *@This()) u16 {
+            const lo = self.memFetchByte();
+            const hi: u16 = self.memFetchByte();
+
+            return (hi << 8) | lo;
         }
 
-        self.setZeroNegative(self.a);
-    }
-
-    fn AHX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ALR(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ANC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn AND(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ARR(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ASL(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn AXS(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BCC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BCS(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BEQ(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BIT(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BMI(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BNE(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BPL(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BRK(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BVC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn BVS(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn CLC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn CLD(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn CLI(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn CLV(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn CMP(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn CPX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn CPY(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn DCP(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn DEC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn DEX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn DEY(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn EOR(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn INC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn INX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn INY(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ISC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn JMP(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn JSR(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn LAS(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn LAX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn LDA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn LDX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn LDY(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn LSR(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn NOP(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ORA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn PHA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn PHP(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn PLA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn PLP(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn RLA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ROL(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn ROR(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn RRA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn RTI(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn RTS(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SAX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SBC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SEC(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SED(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SEI(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SHX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SHY(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SLO(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn SRE(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn STA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn STP(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn STX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn STY(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn TAS(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn TAX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn TAY(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn TSX(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn TXA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn TXS(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn TYA(self: *nescpu) void {
-        _ = self;
-    }
-
-    fn XAA(self: *nescpu) void {
-        _ = self;
-    }
-};
-
-pub fn fromInt(num: u8) status {
-    return @bitCast(num);
-}
-
-pub fn toInt(s: status) u8 {
-    return @bitCast(s);
-}
-
-pub fn main() void {
-    var cpu = nescpu{};
-    const opTable = [256]*const void{
-        // +00         +01         +02         +03         +04         +05         +06         +07         +08          +09         +0A         +0B         +0C         +0D         +0E         +0F
-        &cpu.BRK(), &cpu.ORA(), &cpu.STP(), &cpu.SLO(), &cpu.NOP(), &cpu.ORA(), &cpu.ASL(), &cpu.SLO(), &cpu.PHP(), &cpu.ORA(), &cpu.ASL(), &cpu.ANC(), &cpu.NOP(), &cpu.ORA(), &cpu.ASL(), &cpu.SLO(), // 00
-        &cpu.BPL(), &cpu.ORA(), &cpu.STP(), &cpu.SLO(), &cpu.NOP(), &cpu.ORA(), &cpu.ASL(), &cpu.SLO(), &cpu.CLC(), &cpu.ORA(), &cpu.NOP(), &cpu.SLO(), &cpu.NOP(), &cpu.ORA(), &cpu.ASL(), &cpu.SLO(), // 10
-        &cpu.JSR(), &cpu.AND(), &cpu.STP(), &cpu.RLA(), &cpu.BIT(), &cpu.AND(), &cpu.ROL(), &cpu.RLA(), &cpu.PLP(), &cpu.AND(), &cpu.ROL(), &cpu.ANC(), &cpu.BIT(), &cpu.AND(), &cpu.ROL(), &cpu.RLA(), // 20
-        &cpu.BMI(), &cpu.AND(), &cpu.STP(), &cpu.RLA(), &cpu.NOP(), &cpu.AND(), &cpu.ROL(), &cpu.RLA(), &cpu.SEC(), &cpu.AND(), &cpu.NOP(), &cpu.RLA(), &cpu.NOP(), &cpu.AND(), &cpu.ROL(), &cpu.RLA(), // 30
-        &cpu.RTI(), &cpu.EOR(), &cpu.STP(), &cpu.SRE(), &cpu.NOP(), &cpu.EOR(), &cpu.LSR(), &cpu.SRE(), &cpu.PHA(), &cpu.EOR(), &cpu.LSR(), &cpu.ALR(), &cpu.JMP(), &cpu.EOR(), &cpu.LSR(), &cpu.SRE(), // 40
-        &cpu.BVC(), &cpu.EOR(), &cpu.STP(), &cpu.SRE(), &cpu.NOP(), &cpu.EOR(), &cpu.LSR(), &cpu.SRE(), &cpu.CLI(), &cpu.EOR(), &cpu.NOP(), &cpu.SRE(), &cpu.NOP(), &cpu.EOR(), &cpu.LSR(), &cpu.SRE(), // 50
-        &cpu.RTS(), &cpu.ADC(), &cpu.STP(), &cpu.RRA(), &cpu.NOP(), &cpu.ADC(), &cpu.ROR(), &cpu.RRA(), &cpu.PLA(), &cpu.ADC(), &cpu.ROR(), &cpu.ARR(), &cpu.JMP(), &cpu.ADC(), &cpu.ROR(), &cpu.RRA(), // 60
-        &cpu.BVS(), &cpu.ADC(), &cpu.STP(), &cpu.RRA(), &cpu.NOP(), &cpu.ADC(), &cpu.ROR(), &cpu.RRA(), &cpu.SEI(), &cpu.ADC(), &cpu.NOP(), &cpu.RRA(), &cpu.NOP(), &cpu.ADC(), &cpu.ROR(), &cpu.RRA(), // 70
-        &cpu.NOP(), &cpu.STA(), &cpu.NOP(), &cpu.SAX(), &cpu.STY(), &cpu.STA(), &cpu.STX(), &cpu.SAX(), &cpu.DEY(), &cpu.NOP(), &cpu.TXA(), &cpu.XAA(), &cpu.STY(), &cpu.STA(), &cpu.STX(), &cpu.SAX(), // 80
-        &cpu.BCC(), &cpu.STA(), &cpu.STP(), &cpu.AHX(), &cpu.STY(), &cpu.STA(), &cpu.STX(), &cpu.SAX(), &cpu.TYA(), &cpu.STA(), &cpu.TXS(), &cpu.TAS(), &cpu.SHY(), &cpu.STA(), &cpu.SHX(), &cpu.AHX(), // 90
-        &cpu.LDY(), &cpu.LDA(), &cpu.LDX(), &cpu.LAX(), &cpu.LDY(), &cpu.LDA(), &cpu.LDX(), &cpu.LAX(), &cpu.TAY(), &cpu.LDA(), &cpu.TAX(), &cpu.LAX(), &cpu.LDY(), &cpu.LDA(), &cpu.LDX(), &cpu.LAX(), // A0
-        &cpu.BCS(), &cpu.LDA(), &cpu.STP(), &cpu.LAX(), &cpu.LDY(), &cpu.LDA(), &cpu.LDX(), &cpu.LAX(), &cpu.CLV(), &cpu.LDA(), &cpu.TSX(), &cpu.LAS(), &cpu.LDY(), &cpu.LDA(), &cpu.LDX(), &cpu.LAX(), // B0
-        &cpu.CPY(), &cpu.CMP(), &cpu.NOP(), &cpu.DCP(), &cpu.CPY(), &cpu.CMP(), &cpu.DEC(), &cpu.DCP(), &cpu.INY(), &cpu.CMP(), &cpu.DEX(), &cpu.AXS(), &cpu.CPY(), &cpu.CMP(), &cpu.DEC(), &cpu.DCP(), // C0
-        &cpu.BNE(), &cpu.CMP(), &cpu.STP(), &cpu.DCP(), &cpu.NOP(), &cpu.CMP(), &cpu.DEC(), &cpu.DCP(), &cpu.CLD(), &cpu.CMP(), &cpu.NOP(), &cpu.DCP(), &cpu.NOP(), &cpu.CMP(), &cpu.DEC(), &cpu.DCP(), // D0
-        &cpu.CPX(), &cpu.SBC(), &cpu.NOP(), &cpu.ISC(), &cpu.CPX(), &cpu.SBC(), &cpu.INC(), &cpu.ISC(), &cpu.INX(), &cpu.SBC(), &cpu.NOP(), &cpu.SBC(), &cpu.CPX(), &cpu.SBC(), &cpu.INC(), &cpu.ISC(), // E0
-        &cpu.BEQ(), &cpu.SBC(), &cpu.STP(), &cpu.ISC(), &cpu.NOP(), &cpu.SBC(), &cpu.INC(), &cpu.ISC(), &cpu.SED(), &cpu.SBC(), &cpu.NOP(), &cpu.ISC(), &cpu.NOP(), &cpu.SBC(), &cpu.INC(), &cpu.ISC(), // F0
+        fn memReadByte(self: *@This(), comptime T: type, addr: T) u8 {
+            const data = self.mem[addr];
+            self.cycles += 1;
+
+            return data;
+        }
+
+        fn memReadWord(self: *@This(), addr: u8) u16 {
+            const lo = self.memReadByte(u8, addr);
+            const hi: u16 = self.memReadByte(u8, addr +% 1);
+
+            return (hi << 8) | lo;
+        }
+
+        fn memWriteByte(self: *@This(), addr: u16, val: u8) void {
+            self.mem[addr] = val;
+            self.cycles += 1;
+        }
+
+        fn fetchAbsolute(self: *@This()) addrValPair {
+            const addr = self.memFetchWord();
+            const val = self.memReadByte(u16, addr);
+
+            return addrValPair{
+                .addr = ByteOrWord{ .word = addr },
+                .val = val,
+            };
+        }
+
+        fn fetchAbsoluteX(self: *@This()) addrValPair {
+            const addr = self.memFetchWord();
+            const val = self.memReadByte(u16, addr +% self.x);
+
+            if (checkPageCrossed(addr, self.x)) {
+                self.cycles += 1;
+            }
+
+            return addrValPair{
+                .addr = ByteOrWord{ .word = addr +% self.x },
+                .val = val,
+            };
+        }
+
+        fn fetchAbsoluteY(self: *@This()) addrValPair {
+            const addr = self.memFetchWord();
+            const val = self.memReadByte(u16, addr +% self.y);
+
+            if (checkPageCrossed(addr, self.y)) {
+                self.cycles += 1;
+            }
+
+            return addrValPair{
+                .addr = ByteOrWord{ .word = addr +% self.y },
+                .val = val,
+            };
+        }
+
+        fn fetchImmediate(self: *@This()) addrValPair {
+            const val = self.memFetchByte();
+
+            return addrValPair{
+                .addr = undefined,
+                .val = val,
+            };
+        }
+
+        fn fetchIndirectX(self: *@This()) addrValPair {
+            const addr = self.memReadWord(self.memFetchByte() +% self.x);
+            const val = self.memReadByte(u16, addr);
+
+            self.cycles += 1;
+
+            return addrValPair{
+                .addr = ByteOrWord{ .word = addr },
+                .val = val,
+            };
+        }
+
+        fn fetchIndirectY(self: *@This()) addrValPair {
+            const addr = self.memReadWord(self.memFetchByte());
+            const val = self.memReadByte(u16, addr +% self.y);
+
+            if (checkPageCrossed(addr, self.y)) {
+                self.cycles += 1;
+            }
+
+            return addrValPair{
+                .addr = ByteOrWord{ .word = addr +% self.y },
+                .val = val,
+            };
+        }
+
+        fn fetchZeroPage(self: *@This()) addrValPair {
+            const addr = self.memFetchByte();
+            const val = self.memReadByte(u8, addr);
+
+            return addrValPair{
+                .addr = ByteOrWord{ .byte = addr },
+                .val = val,
+            };
+        }
+
+        fn fetchZeroPageX(self: *@This()) addrValPair {
+            const addr = self.memFetchByte() +% self.x;
+            const val = self.memReadByte(u8, addr);
+
+            self.cycles += 1;
+
+            return addrValPair{
+                .addr = ByteOrWord{ .byte = addr },
+                .val = val,
+            };
+        }
+
+        pub fn fetchCurrAddrMode(self: *@This(), index: u8) void {
+            self.currAddrMode = self.addrTable[index];
+        }
+
+        fn fetchOperand(self: *@This()) addrValPair {
+            return switch (self.currAddrMode) {
+                .absl => self.fetchAbsolute(),
+                .absX => self.fetchAbsoluteX(),
+                .absY => self.fetchAbsoluteY(),
+                .immd => self.fetchImmediate(),
+                .indX => self.fetchIndirectX(),
+                .indY => self.fetchIndirectY(),
+                .zero => self.fetchZeroPage(),
+                .zroX => self.fetchZeroPageX(),
+                else => .{ .addr = ByteOrWord{ .byte = 0 }, .val = 0 },
+            };
+        }
+
+        pub fn ADC(self: *@This()) void {
+            const val = self.fetchOperand().val;
+            const res = @as(u16, self.a) + @as(u16, val) + @intFromBool(self.s.carry);
+
+            const AreSignBitsTheSame = ((self.a ^ val) & 0x80) == 0;
+
+            self.a = @as(u8, @truncate(res));
+
+            self.s.carry = res > 0xFF;
+            self.s.overflow = AreSignBitsTheSame and (((self.a ^ val) & 0x80) != 0);
+
+            self.setZeroNegative(self.a);
+        }
+
+
+
+
+
+        fn checkPageCrossed(valA: u16, valB: u8) bool {
+            return ((valA +% valB) & 0xFF00) != (valA & 0xFF00);
+        }
+
+        inline fn setZeroNegative(self: *@This(), register: u8) void {
+            self.s.zero = register == 0;
+            self.s.negative = (register & 0x80) == 0x80;
+        }
     };
-
-    const addrTable = [256]addrMode{
-        //  +00            +01            +02            +03            +04             +05           +06            +07             +08            +09            +0A            +0B            +0C            +0D            +0E            +0F
-        addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 00
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 01
-        addrMode.absl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 20
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 30
-        addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 40
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 50
-        addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.indi, addrMode.absl, addrMode.absl, addrMode.absl, // 60
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 70
-        addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 80
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 90
-        addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // A0
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // B0
-        addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // C0
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // D0
-        addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // E0
-        addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // E0
-    };
-    _ = addrTable;
-    _ = opTable;
 }
