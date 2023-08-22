@@ -250,6 +250,20 @@ pub fn nesCpu() type {
             };
         }
 
+        fn fetchZeroPageY(self: *@This()) addrValPair {
+            const addr = self.memFetchByte();
+            const val = self.memReadByte(u8, addr);
+
+            if (checkPageCrossed(addr, self.y)) {
+                self.cycles += 1;
+            }
+
+            return addrValPair{
+                .addr = ByteOrWord{ .byte = addr +% self.y },
+                .val = val,
+            };
+        }
+
         pub fn fetchCurrAddrMode(self: *@This(), index: u8) void {
             self.currAddrMode = self.addrTable[index];
         }
@@ -269,8 +283,7 @@ pub fn nesCpu() type {
             };
         }
 
-        pub fn ADC(self: *@This()) void {
-            const val = self.fetchOperand().val;
+        fn ADD(self: *@This(), val: u8) void {
             const res = @as(u16, self.a) + @as(u16, val) + @intFromBool(self.s.carry);
 
             const AreSignBitsTheSame = ((self.a ^ val) & 0x80) == 0;
@@ -281,6 +294,11 @@ pub fn nesCpu() type {
             self.s.overflow = AreSignBitsTheSame and (((self.a ^ val) & 0x80) != 0);
 
             self.setZeroNegative(self.a);
+        }
+
+        pub fn ADC(self: *@This()) void {
+            const val = self.fetchOperand().val;
+            self.ADD(val);
         }
 
         fn ASL(self: *@This(), oldVal: u8) u8 {
@@ -313,6 +331,29 @@ pub fn nesCpu() type {
             if (self.currAddrMode == addrMode.absX) {
                 self.cycles = 7;
             }
+        }
+
+        fn CMP(self: *@This(), register: u8, val: u8) void {
+            const res = register -% val;
+
+            self.s.carry = register >= val;
+            self.s.zero = register == val;
+            self.s.negative = (res & 0x80) == 0x80;
+        }
+
+        pub fn CPA(self: *@This()) void {
+            const val = self.fetchOperand().val;
+            self.CMP(self.a, val);
+        }
+
+        pub fn CPX(self: *@This()) void {
+            const val = self.fetchOperand().val;
+            self.CMP(self.x, val);
+        }
+
+        pub fn CPY(self: *@This()) void {
+            const val = self.fetchOperand().val;
+            self.CMP(self.y, val);
         }
 
         fn LSR(self: *@This(), oldVal: u8) u8 {
@@ -411,6 +452,11 @@ pub fn nesCpu() type {
             if (self.currAddrMode == addrMode.absX) {
                 self.cycles = 7;
             }
+        }
+
+        pub fn SBC(self: *@This()) void {
+            const val = self.fetchOperand().val;
+            self.ADD(~val);
         }
 
         fn checkPageCrossed(valA: u16, valB: u8) bool {
