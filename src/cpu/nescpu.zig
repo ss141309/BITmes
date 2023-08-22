@@ -184,6 +184,15 @@ pub fn nesCpu() type {
             };
         }
 
+        fn fetchAccumulator(self: *@This()) addrValPair {
+            self.cycles += 1;
+
+            return addrValPair{
+                .addr = undefined,
+                .val = undefined,
+            };
+        }
+
         fn fetchImmediate(self: *@This()) addrValPair {
             const val = self.memFetchByte();
 
@@ -250,6 +259,7 @@ pub fn nesCpu() type {
                 .absl => self.fetchAbsolute(),
                 .absX => self.fetchAbsoluteX(),
                 .absY => self.fetchAbsoluteY(),
+                .accm => self.fetchAccumulator(),
                 .immd => self.fetchImmediate(),
                 .indX => self.fetchIndirectX(),
                 .indY => self.fetchIndirectY(),
@@ -273,9 +283,135 @@ pub fn nesCpu() type {
             self.setZeroNegative(self.a);
         }
 
+        fn ASL(self: *@This(), oldVal: u8) u8 {
+            self.s.carry = (oldVal & 0x80) == 0x80;
 
+            const newVal = oldVal << 1;
+            self.setZeroNegative(newVal);
 
+            return newVal;
+        }
 
+        pub fn ASLAcc(self: *@This()) void {
+            _ = self.fetchOperand();
+            self.a = self.ASL(self.a);
+        }
+
+        pub fn ASLMem(self: *@This()) void {
+            const opr = self.fetchOperand();
+
+            const addr = switch (opr.addr) {
+                .word => opr.addr.word,
+                .byte => opr.addr.byte,
+            };
+
+            const val = opr.val;
+            self.cycles += 1;
+            self.memWriteByte(addr, self.ASL(val));
+
+            // FIXME
+            if (self.currAddrMode == addrMode.absX) {
+                self.cycles = 7;
+            }
+        }
+
+        fn LSR(self: *@This(), oldVal: u8) u8 {
+            self.s.carry = (oldVal & 0x01) == 0x01;
+
+            const newVal = oldVal >> 1;
+            self.setZeroNegative(newVal);
+
+            return newVal;
+        }
+
+        pub fn LSRAcc(self: *@This()) void {
+            _ = self.fetchOperand();
+            self.a = self.LSR(self.a);
+        }
+
+        pub fn LSRMem(self: *@This()) void {
+            const opr = self.fetchOperand();
+
+            const addr = switch (opr.addr) {
+                .word => opr.addr.word,
+                .byte => opr.addr.byte,
+            };
+
+            const val = opr.val;
+            self.cycles += 1;
+            self.memWriteByte(addr, self.LSR(val));
+
+            // FIXME
+            if (self.currAddrMode == addrMode.absX) {
+                self.cycles = 7;
+            }
+        }
+
+        fn ROL(self: *@This(), oldVal: u8) u8 {
+            const carry: u8 = if (self.s.carry) 0x01 else 0x00;
+            self.s.carry = (oldVal & 0x80) == 0x80;
+
+            const newVal: u8 = (oldVal << 1) | carry;
+            self.setZeroNegative(newVal);
+
+            return newVal;
+        }
+
+        pub fn ROLAcc(self: *@This()) void {
+            _ = self.fetchOperand();
+            self.a = self.ROL(self.a);
+        }
+
+        pub fn ROLMem(self: *@This()) void {
+            const opr = self.fetchOperand();
+
+            const addr = switch (opr.addr) {
+                .word => opr.addr.word,
+                .byte => opr.addr.byte,
+            };
+
+            const val = opr.val;
+            self.cycles += 1;
+            self.memWriteByte(addr, self.ROL(val));
+
+            // FIXME
+            if (self.currAddrMode == addrMode.absX) {
+                self.cycles = 7;
+            }
+        }
+
+        fn ROR(self: *@This(), oldVal: u8) u8 {
+            const carry: u8 = if (self.s.carry) 0x80 else 0x00;
+            self.s.carry = (oldVal & 0x01) == 0x01;
+
+            const newVal: u8 = (oldVal >> 1) | carry;
+            self.setZeroNegative(newVal);
+
+            return newVal;
+        }
+
+        pub fn RORAcc(self: *@This()) void {
+            _ = self.fetchOperand();
+            self.a = self.ROR(self.a);
+        }
+
+        pub fn RORMem(self: *@This()) void {
+            const opr = self.fetchOperand();
+
+            const addr = switch (opr.addr) {
+                .word => opr.addr.word,
+                .byte => opr.addr.byte,
+            };
+
+            const val = opr.val;
+            self.cycles += 1;
+            self.memWriteByte(addr, self.ROR(val));
+
+            // FIXME
+            if (self.currAddrMode == addrMode.absX) {
+                self.cycles = 7;
+            }
+        }
 
         fn checkPageCrossed(valA: u16, valB: u8) bool {
             return ((valA +% valB) & 0xFF00) != (valA & 0xFF00);
@@ -287,3 +423,5 @@ pub fn nesCpu() type {
         }
     };
 }
+
+pub fn main() void {}
