@@ -35,21 +35,6 @@ pub const status = packed struct(u8) {
     }
 };
 
-const ByteWordTag = enum {
-    byte,
-    word,
-};
-
-const ByteOrWord = union(ByteWordTag) {
-    byte: u8,
-    word: u16,
-};
-
-const addrValPair = struct {
-    addr: ByteOrWord,
-    val: u8,
-};
-
 const addrMode = enum {
     absl,
     absX,
@@ -91,7 +76,7 @@ pub fn nesCpu() type {
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 80
             addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 90
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // A0
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // B0
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absY, addrMode.absX, // B0
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // C0
             addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // D0
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // E0
@@ -112,6 +97,7 @@ pub fn nesCpu() type {
             };
         }
 
+        // Read/Write
         pub fn memFetchByte(self: *@This()) u8 {
             const data = self.mem[self.pc];
             self.pc +%= 1;
@@ -127,7 +113,7 @@ pub fn nesCpu() type {
             return (hi << 8) | lo;
         }
 
-        fn memReadByte(self: *@This(), comptime T: type, addr: T) u8 {
+        fn memReadByte(self: *@This(), addr: u16) u8 {
             const data = self.mem[addr];
             self.cycles += 1;
 
@@ -135,8 +121,8 @@ pub fn nesCpu() type {
         }
 
         fn memReadWord(self: *@This(), addr: u8) u16 {
-            const lo = self.memReadByte(u8, addr);
-            const hi: u16 = self.memReadByte(u8, addr +% 1);
+            const lo = self.memReadByte(addr);
+            const hi: u16 = self.memReadByte(addr +% 1);
 
             return (hi << 8) | lo;
         }
@@ -146,129 +132,86 @@ pub fn nesCpu() type {
             self.cycles += 1;
         }
 
-        fn fetchAbsolute(self: *@This()) addrValPair {
+        // Addressing Modes
+        fn fetchAbsolute(self: *@This()) u16 {
             const addr = self.memFetchWord();
-            const val = self.memReadByte(u16, addr);
 
-            return addrValPair{
-                .addr = ByteOrWord{ .word = addr },
-                .val = val,
-            };
+            return addr;
         }
 
-        fn fetchAbsoluteX(self: *@This()) addrValPair {
+        fn fetchAbsoluteX(self: *@This()) u16 {
             const addr = self.memFetchWord();
-            const val = self.memReadByte(u16, addr +% self.x);
 
             if (checkPageCrossed(addr, self.x)) {
                 self.cycles += 1;
             }
 
-            return addrValPair{
-                .addr = ByteOrWord{ .word = addr +% self.x },
-                .val = val,
-            };
+            return addr +% self.x;
         }
 
-        fn fetchAbsoluteY(self: *@This()) addrValPair {
+        fn fetchAbsoluteY(self: *@This()) u16 {
             const addr = self.memFetchWord();
-            const val = self.memReadByte(u16, addr +% self.y);
 
             if (checkPageCrossed(addr, self.y)) {
                 self.cycles += 1;
             }
 
-            return addrValPair{
-                .addr = ByteOrWord{ .word = addr +% self.y },
-                .val = val,
-            };
+            return addr +% self.y;
         }
 
-        fn fetchAccumulator(self: *@This()) addrValPair {
+        fn fetchAccumulator(self: *@This()) u16 {
             self.cycles += 1;
 
-            return addrValPair{
-                .addr = undefined,
-                .val = undefined,
-            };
+            return 0;
         }
 
-        fn fetchImmediate(self: *@This()) addrValPair {
-            const val = self.memFetchByte();
-
-            return addrValPair{
-                .addr = undefined,
-                .val = val,
-            };
+        fn fetchImmediate(self: *@This()) u16 {
+            return self.memFetchByte();
         }
 
-        fn fetchIndirectX(self: *@This()) addrValPair {
+        fn fetchIndirectX(self: *@This()) u16 {
             const addr = self.memReadWord(self.memFetchByte() +% self.x);
-            const val = self.memReadByte(u16, addr);
 
             self.cycles += 1;
 
-            return addrValPair{
-                .addr = ByteOrWord{ .word = addr },
-                .val = val,
-            };
+            return addr;
         }
 
-        fn fetchIndirectY(self: *@This()) addrValPair {
+        fn fetchIndirectY(self: *@This()) u16 {
             const addr = self.memReadWord(self.memFetchByte());
-            const val = self.memReadByte(u16, addr +% self.y);
 
             if (checkPageCrossed(addr, self.y)) {
                 self.cycles += 1;
             }
 
-            return addrValPair{
-                .addr = ByteOrWord{ .word = addr +% self.y },
-                .val = val,
-            };
+            return addr +% self.y;
         }
 
-        fn fetchZeroPage(self: *@This()) addrValPair {
-            const addr = self.memFetchByte();
-            const val = self.memReadByte(u8, addr);
-
-            return addrValPair{
-                .addr = ByteOrWord{ .byte = addr },
-                .val = val,
-            };
+        fn fetchZeroPage(self: *@This()) u16 {
+            return self.memFetchByte();
         }
 
-        fn fetchZeroPageX(self: *@This()) addrValPair {
+        fn fetchZeroPageX(self: *@This()) u16 {
             const addr = self.memFetchByte() +% self.x;
-            const val = self.memReadByte(u8, addr);
 
             self.cycles += 1;
 
-            return addrValPair{
-                .addr = ByteOrWord{ .byte = addr },
-                .val = val,
-            };
+            return addr;
         }
 
-        fn fetchZeroPageY(self: *@This()) addrValPair {
-            const addr = self.memFetchByte();
-            const val = self.memReadByte(u8, addr);
+        fn fetchZeroPageY(self: *@This()) u16 {
+            const addr = self.memFetchByte() +% self.y;
 
-            if (checkPageCrossed(addr, self.y)) {
-                self.cycles += 1;
-            }
+            self.cycles += 1;
 
-            return addrValPair{
-                .addr = ByteOrWord{ .byte = addr +% self.y },
-                .val = val,
-            };
+            return addr;
         }
 
         pub fn fetchCurrAddrMode(self: *@This(), index: u8) void {
             self.currAddrMode = self.addrTable[index];
         }
 
-        fn fetchOperand(self: *@This()) addrValPair {
+        fn fetchAddress(self: *@This()) u16 {
             return switch (self.currAddrMode) {
                 .absl => self.fetchAbsolute(),
                 .absX => self.fetchAbsoluteX(),
@@ -279,10 +222,20 @@ pub fn nesCpu() type {
                 .indY => self.fetchIndirectY(),
                 .zero => self.fetchZeroPage(),
                 .zroX => self.fetchZeroPageX(),
-                else => .{ .addr = ByteOrWord{ .byte = 0 }, .val = 0 },
+                .zroY => self.fetchZeroPageY(),
+                else => 0,
             };
         }
 
+        fn fetchOperand(self: *@This(), addr: u16) u8 {
+            if (self.currAddrMode != addrMode.immd) {
+                return self.memReadByte(addr);
+            } else {
+                return @as(u8, @intCast(addr));
+            }
+        }
+
+        // Instructions
         fn ADD(self: *@This(), val: u8) void {
             const res = @as(u16, self.a) + @as(u16, val) + @intFromBool(self.s.carry);
 
@@ -297,7 +250,7 @@ pub fn nesCpu() type {
         }
 
         pub fn ADC(self: *@This()) void {
-            const val = self.fetchOperand().val;
+            const val = self.fetchOperand(self.fetchAddress());
             self.ADD(val);
         }
 
@@ -311,19 +264,14 @@ pub fn nesCpu() type {
         }
 
         pub fn ASLAcc(self: *@This()) void {
-            _ = self.fetchOperand();
+            _ = self.fetchAddress();
             self.a = self.ASL(self.a);
         }
 
         pub fn ASLMem(self: *@This()) void {
-            const opr = self.fetchOperand();
+            const addr = self.fetchAddress();
+            const val = self.memReadByte(addr);
 
-            const addr = switch (opr.addr) {
-                .word => opr.addr.word,
-                .byte => opr.addr.byte,
-            };
-
-            const val = opr.val;
             self.cycles += 1;
             self.memWriteByte(addr, self.ASL(val));
 
@@ -333,7 +281,8 @@ pub fn nesCpu() type {
             }
         }
 
-        fn CMP(self: *@This(), register: u8, val: u8) void {
+        fn CMP(self: *@This(), register: u8) void {
+            const val = self.fetchOperand(self.fetchAddress());
             const res = register -% val;
 
             self.s.carry = register >= val;
@@ -342,18 +291,17 @@ pub fn nesCpu() type {
         }
 
         pub fn CPA(self: *@This()) void {
-            const val = self.fetchOperand().val;
-            self.CMP(self.a, val);
+            self.CMP(self.a);
         }
 
         pub fn CPX(self: *@This()) void {
-            const val = self.fetchOperand().val;
-            self.CMP(self.x, val);
+            self.CMP(self.x);
         }
 
         pub fn CPY(self: *@This()) void {
-            const val = self.fetchOperand().val;
-            self.CMP(self.y, val);
+            self.CMP(self.y);
+        }
+
         }
 
         fn LSR(self: *@This(), oldVal: u8) u8 {
@@ -366,19 +314,14 @@ pub fn nesCpu() type {
         }
 
         pub fn LSRAcc(self: *@This()) void {
-            _ = self.fetchOperand();
+            _ = self.fetchAddress();
             self.a = self.LSR(self.a);
         }
 
         pub fn LSRMem(self: *@This()) void {
-            const opr = self.fetchOperand();
+            const addr = self.fetchAddress();
+            const val = self.memReadByte(addr);
 
-            const addr = switch (opr.addr) {
-                .word => opr.addr.word,
-                .byte => opr.addr.byte,
-            };
-
-            const val = opr.val;
             self.cycles += 1;
             self.memWriteByte(addr, self.LSR(val));
 
@@ -399,19 +342,14 @@ pub fn nesCpu() type {
         }
 
         pub fn ROLAcc(self: *@This()) void {
-            _ = self.fetchOperand();
+            _ = self.fetchAddress();
             self.a = self.ROL(self.a);
         }
 
         pub fn ROLMem(self: *@This()) void {
-            const opr = self.fetchOperand();
+            const addr = self.fetchAddress();
+            const val = self.memReadByte(addr);
 
-            const addr = switch (opr.addr) {
-                .word => opr.addr.word,
-                .byte => opr.addr.byte,
-            };
-
-            const val = opr.val;
             self.cycles += 1;
             self.memWriteByte(addr, self.ROL(val));
 
@@ -432,19 +370,14 @@ pub fn nesCpu() type {
         }
 
         pub fn RORAcc(self: *@This()) void {
-            _ = self.fetchOperand();
+            _ = self.fetchAddress();
             self.a = self.ROR(self.a);
         }
 
         pub fn RORMem(self: *@This()) void {
-            const opr = self.fetchOperand();
+            const addr = self.fetchAddress();
+            const val = self.memReadByte(addr);
 
-            const addr = switch (opr.addr) {
-                .word => opr.addr.word,
-                .byte => opr.addr.byte,
-            };
-
-            const val = opr.val;
             self.cycles += 1;
             self.memWriteByte(addr, self.ROR(val));
 
@@ -455,10 +388,11 @@ pub fn nesCpu() type {
         }
 
         pub fn SBC(self: *@This()) void {
-            const val = self.fetchOperand().val;
+            const val = self.fetchOperand(self.fetchAddress());
             self.ADD(~val);
         }
 
+        // Misc
         fn checkPageCrossed(valA: u16, valB: u8) bool {
             return ((valA +% valB) & 0xFF00) != (valA & 0xFF00);
         }
