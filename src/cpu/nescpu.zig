@@ -169,6 +169,12 @@ pub fn nesCpu() type {
             return self.memFetchByte();
         }
 
+        fn fetchImplied(self: *@This()) u16 {
+            self.cycles += 1;
+
+            return 0;
+        }
+
         fn fetchIndirectX(self: *@This()) u16 {
             const addr = self.memReadWord(self.memFetchByte() +% self.x);
 
@@ -218,6 +224,7 @@ pub fn nesCpu() type {
                 .absY => self.fetchAbsoluteY(),
                 .accm => self.fetchAccumulator(),
                 .immd => self.fetchImmediate(),
+                .impl => self.fetchImplied(),
                 .indX => self.fetchIndirectX(),
                 .indY => self.fetchIndirectY(),
                 .zero => self.fetchZeroPage(),
@@ -430,6 +437,28 @@ pub fn nesCpu() type {
 
         pub fn STY(self: *@This()) void {
             self.STR(self.y);
+        }
+
+        fn TRA(self: *@This(), reg1: *u8, reg2: u8) void {
+            _ = self.fetchAddress();
+            reg1.* = reg2;
+            self.setZeroNegative(reg1.*);
+        }
+
+        pub fn TAX(self: *@This()) void {
+            self.TRA(&self.x, self.a);
+        }
+
+        pub fn TAY(self: *@This()) void {
+            self.TRA(&self.y, self.a);
+        }
+
+        pub fn TXA(self: *@This()) void {
+            self.TRA(&self.a, self.x);
+        }
+
+        pub fn TYA(self: *@This()) void {
+            self.TRA(&self.a, self.y);
         }
 
         // Misc
