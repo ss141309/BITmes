@@ -302,6 +302,22 @@ pub fn nesCpu() type {
             self.CMP(self.y);
         }
 
+        fn LOD(self: *@This(), register: *u8) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            register.* = val;
+            self.setZeroNegative(register.*);
+        }
+
+        pub fn LDA(self: *@This()) void {
+            self.LOD(&self.a);
+        }
+
+        pub fn LDX(self: *@This()) void {
+            self.LOD(&self.x);
+        }
+
+        pub fn LDY(self: *@This()) void {
+            self.LOD(&self.y);
         }
 
         fn LSR(self: *@This(), oldVal: u8) u8 {
@@ -390,6 +406,30 @@ pub fn nesCpu() type {
         pub fn SBC(self: *@This()) void {
             const val = self.fetchOperand(self.fetchAddress());
             self.ADD(~val);
+        }
+
+        fn STR(self: *@This(), register: u8) void {
+            const addr = self.fetchAddress();
+            self.memWriteByte(addr, register);
+
+            // FIXME
+            if (self.currAddrMode == addrMode.indY) {
+                self.cycles = 6;
+            } else if (self.currAddrMode == addrMode.absY or self.currAddrMode == addrMode.absX) {
+                self.cycles = 5;
+            }
+        }
+
+        pub fn STA(self: *@This()) void {
+            self.STR(self.a);
+        }
+
+        pub fn STX(self: *@This()) void {
+            self.STR(self.x);
+        }
+
+        pub fn STY(self: *@This()) void {
+            self.STR(self.y);
         }
 
         // Misc
