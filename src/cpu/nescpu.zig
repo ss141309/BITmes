@@ -302,6 +302,26 @@ pub fn nesCpu() type {
             self.s.negative = (val & 0x80) == 0x80;
         }
 
+        pub fn CLC(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s.carry = false;
+        }
+
+        pub fn CLD(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s.decimal = false;
+        }
+
+        pub fn CLI(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s.interrupt = false;
+        }
+
+        pub fn CLV(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s.overflow = false;
+        }
+
         fn CMP(self: *@This(), register: u8) void {
             const val = self.fetchOperand(self.fetchAddress());
             const res = register -% val;
@@ -520,6 +540,21 @@ pub fn nesCpu() type {
         pub fn SBC(self: *@This()) void {
             const val = self.fetchOperand(self.fetchAddress());
             self.ADD(~val);
+        }
+
+        pub fn SEC(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s.carry = true;
+        }
+
+        pub fn SED(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s.decimal = true;
+        }
+
+        pub fn SEI(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s.interrupt = true;
         }
 
         fn STR(self: *@This(), register: u8) void {
