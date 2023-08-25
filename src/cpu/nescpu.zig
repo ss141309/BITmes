@@ -323,10 +323,68 @@ pub fn nesCpu() type {
             self.CMP(self.y);
         }
 
+        pub fn DEC(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.fetchOperand(addr) -% 1;
+
+            self.memWriteByte(addr, val);
+            self.setZeroNegative(val);
+
+            // FIXME
+            if (self.currAddrMode == addrMode.zero) {
+                self.cycles = 5;
+            } else if (self.currAddrMode == addrMode.zroX or self.currAddrMode == addrMode.absl) {
+                self.cycles = 6;
+            } else if (self.currAddrMode == addrMode.absX) {
+                self.cycles = 7;
+            }
+        }
+
+        pub fn DEX(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.x -%= 1;
+            self.setZeroNegative(self.x);
+        }
+
+        pub fn DEY(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.y -%= 1;
+            self.setZeroNegative(self.y);
+        }
+
         pub fn EOR(self: *@This()) void {
             const val = self.fetchOperand(self.fetchAddress());
             self.a ^= val;
             self.setZeroNegative(self.a);
+        }
+
+        pub fn INC(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.fetchOperand(addr) +% 1;
+
+            self.memWriteByte(addr, val);
+            self.setZeroNegative(val);
+
+            // FIXME
+            if (self.currAddrMode == addrMode.zero) {
+                self.cycles = 5;
+            } else if (self.currAddrMode == addrMode.zroX or self.currAddrMode == addrMode.absl) {
+                self.cycles = 6;
+            } else if (self.currAddrMode == addrMode.absX) {
+                self.cycles = 7;
+            }
+        }
+
+        pub fn INX(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.x +%= 1;
+            self.setZeroNegative(self.x);
+        }
+
+        pub fn INY(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.y +%= 1;
+            self.setZeroNegative(self.y);
         }
 
         fn LOD(self: *@This(), register: *u8) void {
