@@ -21,8 +21,8 @@ pub const status = packed struct(u8) {
     zero: bool,
     interrupt: bool,
     decimal: bool,
-    brk: bool,
     reserved: bool,
+    brk: bool,
     overflow: bool,
     negative: bool,
 
@@ -354,6 +354,29 @@ pub fn nesCpu() type {
             }
         }
 
+        pub fn PHA(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.push(self.a);
+        }
+
+        pub fn PHP(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.push(status.toInt(self.s) | 0x30); // Set bits 4 and 5 on
+        }
+
+        pub fn PLA(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.a = self.pop();
+            self.setZeroNegative(self.a);
+        }
+
+        pub fn PLP(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.s = status.fromInt(self.pop());
+            self.s.reserved = false;
+            self.s.brk = true;
+        }
+
         fn ROL(self: *@This(), oldVal: u8) u8 {
             const carry: u8 = if (self.s.carry) 0x01 else 0x00;
             self.s.carry = (oldVal & 0x80) == 0x80;
@@ -453,8 +476,17 @@ pub fn nesCpu() type {
             self.TRA(&self.y, self.a);
         }
 
+        pub fn TSX(self: *@This()) void {
+            self.TRA(&self.x, self.sp);
+        }
+
         pub fn TXA(self: *@This()) void {
             self.TRA(&self.a, self.x);
+        }
+
+        pub fn TXS(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.sp = self.x;
         }
 
         pub fn TYA(self: *@This()) void {
@@ -464,6 +496,22 @@ pub fn nesCpu() type {
         // Misc
         fn checkPageCrossed(valA: u16, valB: u8) bool {
             return ((valA +% valB) & 0xFF00) != (valA & 0xFF00);
+        }
+
+        fn push(self: *@This(), val: u8) void {
+            const addr = @as(u16, self.sp) + 0x100;
+            self.mem[addr] = val;
+
+            self.sp -%= 1;
+            self.cycles += 1;
+        }
+
+        fn pop(self: *@This()) u8 {
+            self.sp +%= 1;
+            self.cycles += 1;
+
+            const addr = @as(u16, self.sp) + 0x100;
+            return self.memReadByte(addr);
         }
 
         inline fn setZeroNegative(self: *@This(), register: u8) void {
