@@ -261,6 +261,12 @@ pub fn nesCpu() type {
             self.ADD(val);
         }
 
+        pub fn AND(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            self.a &= val;
+            self.setZeroNegative(self.a);
+        }
+
         fn ASL(self: *@This(), oldVal: u8) u8 {
             self.s.carry = (oldVal & 0x80) == 0x80;
 
@@ -288,6 +294,14 @@ pub fn nesCpu() type {
             }
         }
 
+        pub fn BIT(self: *@This()) void {
+            const val = self.memReadByte(self.fetchAddress());
+
+            self.s.zero = (self.a & val) == 0;
+            self.s.overflow = (val & 0x40) == 0x40;
+            self.s.negative = (val & 0x80) == 0x80;
+        }
+
         fn CMP(self: *@This(), register: u8) void {
             const val = self.fetchOperand(self.fetchAddress());
             const res = register -% val;
@@ -307,6 +321,12 @@ pub fn nesCpu() type {
 
         pub fn CPY(self: *@This()) void {
             self.CMP(self.y);
+        }
+
+        pub fn EOR(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            self.a ^= val;
+            self.setZeroNegative(self.a);
         }
 
         fn LOD(self: *@This(), register: *u8) void {
@@ -352,6 +372,12 @@ pub fn nesCpu() type {
             if (self.currAddrMode == addrMode.absX) {
                 self.cycles = 7;
             }
+        }
+
+        pub fn ORA(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            self.a |= val;
+            self.setZeroNegative(self.a);
         }
 
         pub fn PHA(self: *@This()) void {
