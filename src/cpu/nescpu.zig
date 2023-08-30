@@ -227,6 +227,7 @@ pub fn nesCpu() type {
                 .impl => self.fetchImplied(),
                 .indX => self.fetchIndirectX(),
                 .indY => self.fetchIndirectY(),
+                .rela => self.fetchImmediate(),
                 .zero => self.fetchZeroPage(),
                 .zroX => self.fetchZeroPageX(),
                 .zroY => self.fetchZeroPageY(),
@@ -235,10 +236,10 @@ pub fn nesCpu() type {
         }
 
         fn fetchOperand(self: *@This(), addr: u16) u8 {
-            if (self.currAddrMode != addrMode.immd) {
-                return self.memReadByte(addr);
-            } else {
+            if (self.currAddrMode == addrMode.immd or self.currAddrMode == addrMode.rela) {
                 return @as(u8, @intCast(addr));
+            } else {
+                return self.memReadByte(addr);
             }
         }
 
@@ -300,6 +301,54 @@ pub fn nesCpu() type {
             self.s.zero = (self.a & val) == 0;
             self.s.overflow = (val & 0x40) == 0x40;
             self.s.negative = (val & 0x80) == 0x80;
+        }
+
+        pub fn BCC(self: *@This()) void {
+            self.BRA(!self.s.carry);
+        }
+
+        pub fn BCS(self: *@This()) void {
+            self.BRA(self.s.carry);
+        }
+
+        pub fn BEQ(self: *@This()) void {
+            self.BRA(self.s.zero);
+        }
+
+        pub fn BMI(self: *@This()) void {
+            self.BRA(self.s.negative);
+        }
+
+        pub fn BNE(self: *@This()) void {
+            self.BRA(!self.s.zero);
+        }
+
+        pub fn BPL(self: *@This()) void {
+            self.BRA(!self.s.negative);
+        }
+
+        pub fn BVC(self: *@This()) void {
+            self.BRA(!self.s.overflow);
+        }
+
+        pub fn BVS(self: *@This()) void {
+            self.BRA(self.s.overflow);
+        }
+
+        fn BRA(self: *@This(), branch: bool) void {
+            const signedAddr: i8 = @bitCast(self.fetchOperand(self.fetchAddress()));
+            if (branch) {
+                var temp: i32 = @as(i32, @intCast(self.pc));
+
+                if (signedCheckPageCrossed(temp, signedAddr)) {
+                    self.cycles += 1;
+                }
+                temp += signedAddr;
+                const res: i16 = @as(i16, @truncate(temp));
+
+                self.pc = @as(u16, @bitCast(res));
+                self.cycles += 1;
+            }
         }
 
         pub fn CLC(self: *@This()) void {
@@ -614,6 +663,10 @@ pub fn nesCpu() type {
 
         // Misc
         fn checkPageCrossed(valA: u16, valB: u8) bool {
+            return ((valA +% valB) & 0xFF00) != (valA & 0xFF00);
+        }
+
+        fn signedCheckPageCrossed(valA: i32, valB: i8) bool {
             return ((valA +% valB) & 0xFF00) != (valA & 0xFF00);
         }
 
