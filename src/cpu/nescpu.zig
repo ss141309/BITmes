@@ -175,6 +175,21 @@ pub fn nesCpu() type {
             return 0;
         }
 
+        fn fetchIndirect(self: *@This()) u16 {
+            const baseAddr = self.memFetchWord();
+            if ((baseAddr & 0x00FF) == 0x00FF) {
+                const lo = self.memReadByte(baseAddr);
+                const hi: u16 = self.memReadByte(baseAddr - 0xFF);
+
+                return (hi << 8) | lo;
+            } else {
+                const lo = self.memReadByte(baseAddr);
+                const hi: u16 = self.memReadByte(baseAddr + 1);
+
+                return (hi << 8) | lo;
+            }
+        }
+
         fn fetchIndirectX(self: *@This()) u16 {
             const addr = self.memReadWord(self.memFetchByte() +% self.x);
 
@@ -225,6 +240,7 @@ pub fn nesCpu() type {
                 .accm => self.fetchAccumulator(),
                 .immd => self.fetchImmediate(),
                 .impl => self.fetchImplied(),
+                .indi => self.fetchIndirect(),
                 .indX => self.fetchIndirectX(),
                 .indY => self.fetchIndirectY(),
                 .rela => self.fetchImmediate(),
@@ -456,6 +472,17 @@ pub fn nesCpu() type {
             self.setZeroNegative(self.y);
         }
 
+        pub fn JMP(self: *@This()) void {
+            self.pc = self.fetchAddress();
+        }
+
+        pub fn JSR(self: *@This()) void {
+            const addr = self.fetchAddress();
+            self.pushWord(self.pc - 1);
+            self.pc = addr;
+            self.cycles += 1;
+        }
+
         fn LOD(self: *@This(), register: *u8) void {
             const val = self.fetchOperand(self.fetchAddress());
             register.* = val;
@@ -586,6 +613,11 @@ pub fn nesCpu() type {
             }
         }
 
+        pub fn RTS(self: *@This()) void {
+            _ = self.fetchAddress();
+            self.pc = self.popWord() + 1;
+        }
+
         pub fn SBC(self: *@This()) void {
             const val = self.fetchOperand(self.fetchAddress());
             self.ADD(~val);
@@ -678,12 +710,27 @@ pub fn nesCpu() type {
             self.cycles += 1;
         }
 
+        fn pushWord(self: *@This(), val: u16) void {
+            const lo: u16 = val >> 8;
+            const hi: u8 = @truncate(val);
+
+            self.push(@as(u8, @intCast(lo)));
+            self.push(hi);
+        }
+
         fn pop(self: *@This()) u8 {
             self.sp +%= 1;
             self.cycles += 1;
 
             const addr = @as(u16, self.sp) + 0x100;
             return self.memReadByte(addr);
+        }
+
+        fn popWord(self: *@This()) u16 {
+            const lo = self.pop();
+            const hi: u16 = self.pop();
+
+            return (hi << 8) | lo;
         }
 
         inline fn setZeroNegative(self: *@This(), register: u8) void {
