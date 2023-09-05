@@ -38,13 +38,16 @@ pub const status = packed struct(u8) {
 const addrMode = enum {
     absl,
     absX,
+    abXW,
     absY,
+    abYW,
     accm,
     immd,
     impl,
     indi,
     indX,
     indY,
+    inYW,
     none,
     rela,
     zero,
@@ -66,21 +69,40 @@ pub fn nesCpu() type {
         addrTable: [256]addrMode = [256]addrMode{
             //  +00            +01            +02            +03            +04             +05           +06            +07             +08            +09            +0A            +0B            +0C            +0D            +0E            +0F
             addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 00
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 01
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.abXW, addrMode.absX, // 01
             addrMode.absl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 20
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 30
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.abYW, addrMode.absX, addrMode.absX, addrMode.abXW, addrMode.abXW, // 30
             addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 40
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 50
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.abYW, addrMode.absX, addrMode.absX, addrMode.abXW, addrMode.abXW, // 50
             addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.indi, addrMode.absl, addrMode.absl, addrMode.absl, // 60
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 70
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.abYW, addrMode.absX, addrMode.absX, addrMode.abXW, addrMode.abXW, // 70
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 80
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // 90
+            addrMode.rela, addrMode.inYW, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.abYW, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.abXW, addrMode.absX, addrMode.absX, // 90
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // A0
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absY, addrMode.absX, // B0
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absY, addrMode.absY, // B0
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // C0
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // D0
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.abYW, addrMode.absX, addrMode.absX, addrMode.abXW, addrMode.abXW, // D0
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // E0
-            addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absX, addrMode.absX, // F0
+            addrMode.rela, addrMode.indY, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.abYW, addrMode.absX, addrMode.absX, addrMode.abXW, addrMode.abXW, // F0
+        },
+        opTable: [256]*const fn (*nesCpu()) void = [256]*const fn (*nesCpu()) void{
+            //   +00           +01           +02           +03           +04           +05           +06              +07           +08           +09           +0A           +0B           +0C           +0D           +0E           +0F
+            &@This().BRK, &@This().ORA, &@This().STP, &@This().SLO, &@This().NOP, &@This().ORA, &@This().ASLMem, &@This().SLO, &@This().PHP, &@This().ORA, &@This().ASLAcc, &@This().ANC, &@This().NOP, &@This().ORA, &@This().ASLMem, &@This().SLO, // 00
+            &@This().BPL, &@This().ORA, &@This().STP, &@This().SLO, &@This().NOP, &@This().ORA, &@This().ASLMem, &@This().SLO, &@This().CLC, &@This().ORA, &@This().NOP, &@This().SLO, &@This().NOP, &@This().ORA, &@This().ASLMem, &@This().SLO, // 10
+            &@This().JSR, &@This().AND, &@This().STP, &@This().RLA, &@This().BIT, &@This().AND, &@This().ROLMem, &@This().RLA, &@This().PLP, &@This().AND, &@This().ROLAcc, &@This().ANC, &@This().BIT, &@This().AND, &@This().ROLMem, &@This().RLA, // 20
+            &@This().BMI, &@This().AND, &@This().STP, &@This().RLA, &@This().NOP, &@This().AND, &@This().ROLMem, &@This().RLA, &@This().SEC, &@This().AND, &@This().NOP, &@This().RLA, &@This().NOP, &@This().AND, &@This().ROLMem, &@This().RLA, // 30
+            &@This().RTI, &@This().EOR, &@This().STP, &@This().SRE, &@This().NOP, &@This().EOR, &@This().LSRMem, &@This().SRE, &@This().PHA, &@This().EOR, &@This().LSRAcc, &@This().ALR, &@This().JMP, &@This().EOR, &@This().LSRMem, &@This().SRE, // 40
+            &@This().BVC, &@This().EOR, &@This().STP, &@This().SRE, &@This().NOP, &@This().EOR, &@This().LSRMem, &@This().SRE, &@This().CLI, &@This().EOR, &@This().NOP, &@This().SRE, &@This().NOP, &@This().EOR, &@This().LSRMem, &@This().SRE, // 50
+            &@This().RTS, &@This().ADC, &@This().STP, &@This().RRA, &@This().NOP, &@This().ADC, &@This().RORMem, &@This().RRA, &@This().PLA, &@This().ADC, &@This().RORAcc, &@This().ARR, &@This().JMP, &@This().ADC, &@This().RORMem, &@This().RRA, // 60
+            &@This().BVS, &@This().ADC, &@This().STP, &@This().RRA, &@This().NOP, &@This().ADC, &@This().RORMem, &@This().RRA, &@This().SEI, &@This().ADC, &@This().NOP, &@This().RRA, &@This().NOP, &@This().ADC, &@This().RORMem, &@This().RRA, // 70
+            &@This().NOP, &@This().STA, &@This().NOP, &@This().SAX, &@This().STY, &@This().STA, &@This().STX, &@This().SAX, &@This().DEY, &@This().NOP, &@This().TXA, &@This().XAA, &@This().STY, &@This().STA, &@This().STX, &@This().SAX, // 80
+            &@This().BCC, &@This().STA, &@This().STP, &@This().AHX, &@This().STY, &@This().STA, &@This().STX, &@This().SAX, &@This().TYA, &@This().STA, &@This().TXS, &@This().TAS, &@This().SHY, &@This().STA, &@This().SHX, &@This().AHX, // 90
+            &@This().LDY, &@This().LDA, &@This().LDX, &@This().LAX, &@This().LDY, &@This().LDA, &@This().LDX, &@This().LAX, &@This().TAY, &@This().LDA, &@This().TAX, &@This().LAX, &@This().LDY, &@This().LDA, &@This().LDX, &@This().LAX, // A0
+            &@This().BCS, &@This().LDA, &@This().STP, &@This().LAX, &@This().LDY, &@This().LDA, &@This().LDX, &@This().LAX, &@This().CLV, &@This().LDA, &@This().TSX, &@This().LAS, &@This().LDY, &@This().LDA, &@This().LDX, &@This().LAX, // B0
+            &@This().CPY, &@This().CPA, &@This().NOP, &@This().DCP, &@This().CPY, &@This().CPA, &@This().DEC, &@This().DCP, &@This().INY, &@This().CPA, &@This().DEX, &@This().AXS, &@This().CPY, &@This().CPA, &@This().DEC, &@This().DCP, // C0
+            &@This().BNE, &@This().CPA, &@This().STP, &@This().DCP, &@This().NOP, &@This().CPA, &@This().DEC, &@This().DCP, &@This().CLD, &@This().CPA, &@This().NOP, &@This().DCP, &@This().NOP, &@This().CPA, &@This().DEC, &@This().DCP, // D0
+            &@This().CPX, &@This().SBC, &@This().NOP, &@This().ISC, &@This().CPX, &@This().SBC, &@This().INC, &@This().ISC, &@This().INX, &@This().SBC, &@This().NOP, &@This().SBC, &@This().CPX, &@This().SBC, &@This().INC, &@This().ISC, // E0
+            &@This().BEQ, &@This().SBC, &@This().STP, &@This().ISC, &@This().NOP, &@This().SBC, &@This().INC, &@This().ISC, &@This().SED, &@This().SBC, &@This().NOP, &@This().ISC, &@This().NOP, &@This().SBC, &@This().INC, &@This().ISC, // F0
         },
 
         pub fn init(PC: u16, SP: u8, A: u8, X: u8, Y: u8, S: u8) @This() {
@@ -93,7 +115,7 @@ pub fn nesCpu() type {
                 .s = status.fromInt(S),
                 .cycles = 0,
                 .mem = undefined,
-                .currAddrMode = addrMode.none,
+                .currAddrMode = undefined,
             };
         }
 
@@ -127,6 +149,13 @@ pub fn nesCpu() type {
             return (hi << 8) | lo;
         }
 
+        fn memReadFromWord(self: *@This(), addr: u16) u16 {
+            const lo = self.memReadByte(addr);
+            const hi: u16 = self.memReadByte(addr + 1);
+
+            return (hi << 8) | lo;
+        }
+
         fn memWriteByte(self: *@This(), addr: u16, val: u8) void {
             self.mem[addr] = val;
             self.cycles += 1;
@@ -139,20 +168,20 @@ pub fn nesCpu() type {
             return addr;
         }
 
-        fn fetchAbsoluteX(self: *@This()) u16 {
+        fn fetchAbsoluteX(self: *@This(), dummyRead: bool) u16 {
             const addr = self.memFetchWord();
 
-            if (checkPageCrossed(addr, self.x)) {
+            if (checkPageCrossed(addr, self.x) or dummyRead) {
                 self.cycles += 1;
             }
 
             return addr +% self.x;
         }
 
-        fn fetchAbsoluteY(self: *@This()) u16 {
+        fn fetchAbsoluteY(self: *@This(), dummyRead: bool) u16 {
             const addr = self.memFetchWord();
 
-            if (checkPageCrossed(addr, self.y)) {
+            if (checkPageCrossed(addr, self.y) or dummyRead) {
                 self.cycles += 1;
             }
 
@@ -177,17 +206,15 @@ pub fn nesCpu() type {
 
         fn fetchIndirect(self: *@This()) u16 {
             const baseAddr = self.memFetchWord();
+
             if ((baseAddr & 0x00FF) == 0x00FF) {
                 const lo = self.memReadByte(baseAddr);
                 const hi: u16 = self.memReadByte(baseAddr - 0xFF);
 
                 return (hi << 8) | lo;
-            } else {
-                const lo = self.memReadByte(baseAddr);
-                const hi: u16 = self.memReadByte(baseAddr + 1);
-
-                return (hi << 8) | lo;
             }
+
+            return self.memReadFromWord(baseAddr);
         }
 
         fn fetchIndirectX(self: *@This()) u16 {
@@ -198,10 +225,10 @@ pub fn nesCpu() type {
             return addr;
         }
 
-        fn fetchIndirectY(self: *@This()) u16 {
+        fn fetchIndirectY(self: *@This(), dummyRead: bool) u16 {
             const addr = self.memReadWord(self.memFetchByte());
 
-            if (checkPageCrossed(addr, self.y)) {
+            if (checkPageCrossed(addr, self.y) or dummyRead) {
                 self.cycles += 1;
             }
 
@@ -235,19 +262,22 @@ pub fn nesCpu() type {
         fn fetchAddress(self: *@This()) u16 {
             return switch (self.currAddrMode) {
                 .absl => self.fetchAbsolute(),
-                .absX => self.fetchAbsoluteX(),
-                .absY => self.fetchAbsoluteY(),
+                .absX => self.fetchAbsoluteX(false),
+                .abXW => self.fetchAbsoluteX(true),
+                .absY => self.fetchAbsoluteY(false),
+                .abYW => self.fetchAbsoluteY(true),
                 .accm => self.fetchAccumulator(),
                 .immd => self.fetchImmediate(),
                 .impl => self.fetchImplied(),
                 .indi => self.fetchIndirect(),
                 .indX => self.fetchIndirectX(),
-                .indY => self.fetchIndirectY(),
+                .indY => self.fetchIndirectY(false),
+                .inYW => self.fetchIndirectY(true),
+                .none => self.fetchImplied(),
                 .rela => self.fetchImmediate(),
                 .zero => self.fetchZeroPage(),
                 .zroX => self.fetchZeroPageX(),
                 .zroY => self.fetchZeroPageY(),
-                else => 0,
             };
         }
 
@@ -278,6 +308,42 @@ pub fn nesCpu() type {
             self.ADD(val);
         }
 
+        pub fn AHX(self: *@This()) void {
+            const addr = self.fetchAddress();
+
+            self.memWriteByte(addr, @as(u8, @truncate((addr >> 8) + 1)) & (self.x & self.a));
+        }
+
+        pub fn ALR(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+
+            self.a &= val;
+            self.a = self.LSR(self.a);
+        }
+
+        // FIXME
+        pub fn ARR(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            const carry: u8 = if (self.s.carry) 0x80 else 0x00;
+            //const carry = @intFromBool(self.s.carry);
+
+            std.debug.print("{}\n", .{((self.a & 250) >> 1) | carry});
+            std.debug.print("{b} {b}\n", .{ 155, 181 });
+            self.a = ((self.a & val) >> 1) | carry; // 155
+
+            self.s.carry = (self.a & 0x40) == 0x40;
+            self.s.overflow = (self.a >> 6) ^ (self.a >> 5) == 0x1;
+            self.setZeroNegative(self.a);
+        }
+
+        pub fn ANC(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            self.a &= val;
+
+            self.s.carry = (self.a & 0x80) == 0x80;
+            self.setZeroNegative(self.a);
+        }
+
         pub fn AND(self: *@This()) void {
             const val = self.fetchOperand(self.fetchAddress());
             self.a &= val;
@@ -304,15 +370,20 @@ pub fn nesCpu() type {
 
             self.cycles += 1;
             self.memWriteByte(addr, self.ASL(val));
+        }
 
-            // FIXME
-            if (self.currAddrMode == addrMode.absX) {
-                self.cycles = 7;
-            }
+        pub fn AXS(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            self.x &= self.a;
+
+            self.s.carry = self.x >= val;
+
+            self.x -%= val;
+            self.setZeroNegative(self.x);
         }
 
         pub fn BIT(self: *@This()) void {
-            const val = self.memReadByte(self.fetchAddress());
+            const val = self.fetchOperand(self.fetchAddress());
 
             self.s.zero = (self.a & val) == 0;
             self.s.overflow = (val & 0x40) == 0x40;
@@ -343,6 +414,15 @@ pub fn nesCpu() type {
             self.BRA(!self.s.negative);
         }
 
+        pub fn BRK(self: *@This()) void {
+            self.pushWord(self.pc + 1);
+            self.push(status.toInt(self.s) | 0x30);
+            self.s.interrupt = true;
+
+            self.pc = self.memReadFromWord(0xFFFE);
+            self.cycles += 1;
+        }
+
         pub fn BVC(self: *@This()) void {
             self.BRA(!self.s.overflow);
         }
@@ -353,12 +433,14 @@ pub fn nesCpu() type {
 
         fn BRA(self: *@This(), branch: bool) void {
             const signedAddr: i8 = @bitCast(self.fetchOperand(self.fetchAddress()));
+
             if (branch) {
                 var temp: i32 = @as(i32, @intCast(self.pc));
 
                 if (signedCheckPageCrossed(temp, signedAddr)) {
                     self.cycles += 1;
                 }
+
                 temp += signedAddr;
                 const res: i16 = @as(i16, @truncate(temp));
 
@@ -408,6 +490,20 @@ pub fn nesCpu() type {
             self.CMP(self.y);
         }
 
+        pub fn DCP(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.fetchOperand(addr) -% 1;
+
+            const res = self.a -% val;
+
+            self.s.carry = self.a >= val;
+            self.s.zero = self.a == val;
+            self.s.negative = (res & 0x80) == 0x80;
+
+            self.cycles += 1;
+            self.memWriteByte(addr, val);
+        }
+
         pub fn DEC(self: *@This()) void {
             const addr = self.fetchAddress();
             const val = self.fetchOperand(addr) -% 1;
@@ -415,14 +511,7 @@ pub fn nesCpu() type {
             self.memWriteByte(addr, val);
             self.setZeroNegative(val);
 
-            // FIXME
-            if (self.currAddrMode == addrMode.zero) {
-                self.cycles = 5;
-            } else if (self.currAddrMode == addrMode.zroX or self.currAddrMode == addrMode.absl) {
-                self.cycles = 6;
-            } else if (self.currAddrMode == addrMode.absX) {
-                self.cycles = 7;
-            }
+            self.cycles += 1;
         }
 
         pub fn DEX(self: *@This()) void {
@@ -450,14 +539,7 @@ pub fn nesCpu() type {
             self.memWriteByte(addr, val);
             self.setZeroNegative(val);
 
-            // FIXME
-            if (self.currAddrMode == addrMode.zero) {
-                self.cycles = 5;
-            } else if (self.currAddrMode == addrMode.zroX or self.currAddrMode == addrMode.absl) {
-                self.cycles = 6;
-            } else if (self.currAddrMode == addrMode.absX) {
-                self.cycles = 7;
-            }
+            self.cycles += 1;
         }
 
         pub fn INX(self: *@This()) void {
@@ -472,6 +554,14 @@ pub fn nesCpu() type {
             self.setZeroNegative(self.y);
         }
 
+        pub fn ISC(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.fetchOperand(addr) +% 1;
+            self.ADD(~val);
+            self.memWriteByte(addr, val);
+            self.cycles += 1;
+        }
+
         pub fn JMP(self: *@This()) void {
             self.pc = self.fetchAddress();
         }
@@ -481,6 +571,23 @@ pub fn nesCpu() type {
             self.pushWord(self.pc - 1);
             self.pc = addr;
             self.cycles += 1;
+        }
+
+        pub fn LAS(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress()) & self.sp;
+
+            self.a = val;
+            self.x = val;
+            self.sp = val;
+            self.setZeroNegative(self.a);
+        }
+
+        pub fn LAX(self: *@This()) void {
+            const val = self.fetchOperand(self.fetchAddress());
+            self.a = val;
+            self.x = val;
+
+            self.setZeroNegative(self.a);
         }
 
         fn LOD(self: *@This(), register: *u8) void {
@@ -521,11 +628,10 @@ pub fn nesCpu() type {
 
             self.cycles += 1;
             self.memWriteByte(addr, self.LSR(val));
+        }
 
-            // FIXME
-            if (self.currAddrMode == addrMode.absX) {
-                self.cycles = 7;
-            }
+        pub fn NOP(self: *@This()) void {
+            _ = self.fetchAddress();
         }
 
         pub fn ORA(self: *@This()) void {
@@ -557,6 +663,27 @@ pub fn nesCpu() type {
             self.s.brk = true;
         }
 
+        pub fn RLA(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.ROL(self.memReadByte(addr));
+
+            self.a &= val;
+            self.memWriteByte(addr, val);
+            self.cycles += 1;
+            self.setZeroNegative(self.a);
+        }
+
+        pub fn RRA(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.memReadByte(addr);
+            const shiftedVal = self.ROR(val);
+
+            self.ADD(shiftedVal);
+            self.memWriteByte(addr, shiftedVal);
+            self.cycles += 1;
+            self.setZeroNegative(self.a);
+        }
+
         fn ROL(self: *@This(), oldVal: u8) u8 {
             const carry: u8 = if (self.s.carry) 0x01 else 0x00;
             self.s.carry = (oldVal & 0x80) == 0x80;
@@ -578,11 +705,6 @@ pub fn nesCpu() type {
 
             self.cycles += 1;
             self.memWriteByte(addr, self.ROL(val));
-
-            // FIXME
-            if (self.currAddrMode == addrMode.absX) {
-                self.cycles = 7;
-            }
         }
 
         fn ROR(self: *@This(), oldVal: u8) u8 {
@@ -606,16 +728,29 @@ pub fn nesCpu() type {
 
             self.cycles += 1;
             self.memWriteByte(addr, self.ROR(val));
+        }
 
-            // FIXME
-            if (self.currAddrMode == addrMode.absX) {
-                self.cycles = 7;
-            }
+        pub fn RTI(self: *@This()) void {
+            _ = self.fetchAddress();
+
+            self.s = status.fromInt(self.pop());
+            self.s.reserved = false;
+            self.s.brk = true;
+
+            self.pc = self.popWord();
+
+            self.cycles += 1;
         }
 
         pub fn RTS(self: *@This()) void {
             _ = self.fetchAddress();
             self.pc = self.popWord() + 1;
+        }
+
+        pub fn SAX(self: *@This()) void {
+            const addr = self.fetchAddress();
+
+            self.memWriteByte(addr, self.a & self.x);
         }
 
         pub fn SBC(self: *@This()) void {
@@ -638,20 +773,56 @@ pub fn nesCpu() type {
             self.s.interrupt = true;
         }
 
+        //FIXME
+        pub fn SHX(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const hi: u8 = @truncate(addr >> 8);
+            const lo = addr & 0xFF;
+
+            const val: u16 = self.x & (hi +% 1);
+            const newAddr = (val << 8) | lo;
+
+            self.memWriteByte(newAddr, @as(u8, @truncate(val)));
+        }
+
+        // FIXME
+        pub fn SHY(self: *@This()) void {
+            _ = self;
+        }
+
+        pub fn SLO(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.ASL(self.memReadByte(addr));
+
+            self.a |= val;
+
+            self.cycles += 1;
+            self.memWriteByte(addr, val);
+            self.setZeroNegative(self.a);
+        }
+
+        pub fn SRE(self: *@This()) void {
+            const addr = self.fetchAddress();
+            const val = self.LSR(self.memReadByte(addr));
+
+            self.a ^= val;
+            self.memWriteByte(addr, val);
+            self.setZeroNegative(self.a);
+            self.cycles += 1;
+        }
+
         fn STR(self: *@This(), register: u8) void {
             const addr = self.fetchAddress();
             self.memWriteByte(addr, register);
-
-            // FIXME
-            if (self.currAddrMode == addrMode.indY) {
-                self.cycles = 6;
-            } else if (self.currAddrMode == addrMode.absY or self.currAddrMode == addrMode.absX) {
-                self.cycles = 5;
-            }
         }
 
         pub fn STA(self: *@This()) void {
             self.STR(self.a);
+        }
+
+        pub fn STP(self: *@This()) void {
+            _ = self.fetchOperand(self.fetchAddress());
+            self.pc -= 1;
         }
 
         pub fn STX(self: *@This()) void {
@@ -660,6 +831,10 @@ pub fn nesCpu() type {
 
         pub fn STY(self: *@This()) void {
             self.STR(self.y);
+        }
+
+        pub fn TAS(self: *@This()) void {
+            _ = self;
         }
 
         fn TRA(self: *@This(), reg1: *u8, reg2: u8) void {
@@ -689,8 +864,13 @@ pub fn nesCpu() type {
             self.sp = self.x;
         }
 
+        // FIXME
         pub fn TYA(self: *@This()) void {
             self.TRA(&self.a, self.y);
+        }
+
+        pub fn XAA(self: *@This()) void {
+            _ = self;
         }
 
         // Misc
@@ -720,7 +900,8 @@ pub fn nesCpu() type {
 
         fn pop(self: *@This()) u8 {
             self.sp +%= 1;
-            self.cycles += 1;
+            // FIXME
+            //self.cycles += 1;
 
             const addr = @as(u16, self.sp) + 0x100;
             return self.memReadByte(addr);
@@ -740,4 +921,16 @@ pub fn nesCpu() type {
     };
 }
 
-pub fn main() void {}
+pub fn main() void {
+    var cp = nesCpu().init(18413, 195, 2, 71, 112, 34);
+    cp.mem[18413] = 191;
+    cp.mem[18414] = 129;
+    cp.mem[18415] = 55;
+    cp.mem[14321] = 215;
+    cp.mem[18416] = 216;
+    const op = cp.memFetchByte();
+    cp.fetchCurrAddrMode(op);
+    cp.opTable[op](&cp); // 215
+
+    std.debug.print("{}\n", .{cp.a});
+}
