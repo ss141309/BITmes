@@ -77,7 +77,7 @@ pub fn nesCpu() type {
             addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.indi, addrMode.absl, addrMode.absl, addrMode.absl, // 60
             addrMode.rela, addrMode.indY, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.zroX, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.abYW, addrMode.absX, addrMode.absX, addrMode.abXW, addrMode.abXW, // 70
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 80
-            addrMode.rela, addrMode.inYW, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.abYW, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.abXW, addrMode.absX, addrMode.absX, // 90
+            addrMode.rela, addrMode.inYW, addrMode.none, addrMode.inYW, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.abYW, addrMode.impl, addrMode.abYW, addrMode.abXW, addrMode.abXW, addrMode.abYW, addrMode.absX, // 90
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // A0
             addrMode.rela, addrMode.indY, addrMode.none, addrMode.indY, addrMode.zroX, addrMode.zroX, addrMode.zroY, addrMode.zroY, addrMode.impl, addrMode.absY, addrMode.impl, addrMode.absY, addrMode.absX, addrMode.absX, addrMode.absY, addrMode.absY, // B0
             addrMode.immd, addrMode.indX, addrMode.immd, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // C0
@@ -324,15 +324,14 @@ pub fn nesCpu() type {
         // FIXME
         pub fn ARR(self: *@This()) void {
             const val = self.fetchOperand(self.fetchAddress());
-            const carry: u8 = if (self.s.carry) 0x80 else 0x00;
-            //const carry = @intFromBool(self.s.carry);
+            //const carry: u8 = if (self.s.carry) 0x80 else 0x00;
+            //const carry: u8 = @intFromBool(self.s.carry);
 
-            std.debug.print("{}\n", .{((self.a & 250) >> 1) | carry});
-            std.debug.print("{b} {b}\n", .{ 155, 181 });
-            self.a = ((self.a & val) >> 1) | carry; // 155
+            std.debug.print("{b}\n", .{155});
+            self.a = ((self.a & val) >> 1) | 0x00;
 
             self.s.carry = (self.a & 0x40) == 0x40;
-            self.s.overflow = (self.a >> 6) ^ (self.a >> 5) == 0x1;
+            self.s.overflow = ((self.a >> 5) & 0x01) ^ ((self.a >> 6) & 0x01) != 0;
             self.setZeroNegative(self.a);
         }
 
@@ -773,21 +772,16 @@ pub fn nesCpu() type {
             self.s.interrupt = true;
         }
 
-        //FIXME
         pub fn SHX(self: *@This()) void {
             const addr = self.fetchAddress();
-            const hi: u8 = @truncate(addr >> 8);
-            const lo = addr & 0xFF;
-
-            const val: u16 = self.x & (hi +% 1);
-            const newAddr = (val << 8) | lo;
-
-            self.memWriteByte(newAddr, @as(u8, @truncate(val)));
+            const val = self.x & @as(u8, @truncate((addr >> 8) + 1));
+            self.memWriteByte(addr, val);
         }
 
-        // FIXME
         pub fn SHY(self: *@This()) void {
-            _ = self;
+            const addr = self.fetchAddress();
+            const val = self.y & @as(u8, @truncate((addr >> 8) + 1));
+            self.memWriteByte(addr, val);
         }
 
         pub fn SLO(self: *@This()) void {
@@ -834,7 +828,11 @@ pub fn nesCpu() type {
         }
 
         pub fn TAS(self: *@This()) void {
-            _ = self;
+            const addr = self.fetchAddress();
+            self.sp = self.a & self.x;
+
+            const val: u8 = self.sp & @as(u8, @truncate((addr >> 8) + 1));
+            self.memWriteByte(addr, val);
         }
 
         fn TRA(self: *@This(), reg1: *u8, reg2: u8) void {
@@ -864,7 +862,6 @@ pub fn nesCpu() type {
             self.sp = self.x;
         }
 
-        // FIXME
         pub fn TYA(self: *@This()) void {
             self.TRA(&self.a, self.y);
         }
@@ -901,7 +898,7 @@ pub fn nesCpu() type {
         fn pop(self: *@This()) u8 {
             self.sp +%= 1;
             // FIXME
-            //self.cycles += 1;
+            self.cycles += 1;
 
             const addr = @as(u16, self.sp) + 0x100;
             return self.memReadByte(addr);
@@ -919,18 +916,4 @@ pub fn nesCpu() type {
             self.s.negative = (register & 0x80) == 0x80;
         }
     };
-}
-
-pub fn main() void {
-    var cp = nesCpu().init(18413, 195, 2, 71, 112, 34);
-    cp.mem[18413] = 191;
-    cp.mem[18414] = 129;
-    cp.mem[18415] = 55;
-    cp.mem[14321] = 215;
-    cp.mem[18416] = 216;
-    const op = cp.memFetchByte();
-    cp.fetchCurrAddrMode(op);
-    cp.opTable[op](&cp); // 215
-
-    std.debug.print("{}\n", .{cp.a});
 }
