@@ -1,4 +1,4 @@
-// Copyright 2023 समीर सिंह Sameer Singh
+// Copyright 2023-2024 समीर सिंह Sameer Singh
 
 // This file is part of BITmes.
 // BITmes is free software: you can redistribute it and/or modify
@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with BITmes. If not, see <https:www.gnu.org/licenses/>.
 
-const std = @import("std");
+const Console = @import("console.zig").Console;
 
-pub const status = packed struct(u8) {
+const status = packed struct(u8) {
     carry: bool,
     zero: bool,
     interrupt: bool,
@@ -26,11 +26,11 @@ pub const status = packed struct(u8) {
     overflow: bool,
     negative: bool,
 
-    pub fn fromInt(num: u8) status {
+    fn fromInt(num: u8) status {
         return @bitCast(num);
     }
 
-    pub fn toInt(s: status) u8 {
+    fn toInt(s: status) u8 {
         return @bitCast(s);
     }
 };
@@ -57,15 +57,15 @@ const addrMode = enum {
 
 pub fn nesCpu() type {
     return struct {
-        pc: u16,
-        sp: u8,
-        a: u8,
-        x: u8,
-        y: u8,
-        s: status,
-        cycles: u8,
-        mem: [64 * 1024]u8,
-        currAddrMode: addrMode,
+        console: *Console,
+        pc: u16 = 0,
+        sp: u8 = 0,
+        a: u8 = 0,
+        x: u8 = 0,
+        y: u8 = 0,
+        cycles: u8 = 0,
+        s: status = undefined,
+        currAddrMode: addrMode = undefined,
         addrTable: [256]addrMode = [256]addrMode{
             //  +00            +01            +02            +03            +04             +05           +06            +07             +08            +09            +0A            +0B            +0C            +0D            +0E            +0F
             addrMode.impl, addrMode.indX, addrMode.none, addrMode.indX, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.zero, addrMode.impl, addrMode.immd, addrMode.accm, addrMode.immd, addrMode.absl, addrMode.absl, addrMode.absl, addrMode.absl, // 00
@@ -105,23 +105,29 @@ pub fn nesCpu() type {
             &@This().BEQ, &@This().SBC, &@This().STP, &@This().ISC, &@This().NOP, &@This().SBC, &@This().INC, &@This().ISC, &@This().SED, &@This().SBC, &@This().NOP, &@This().ISC, &@This().NOP, &@This().SBC, &@This().INC, &@This().ISC, // F0
         },
 
-        pub fn init(PC: u16, SP: u8, A: u8, X: u8, Y: u8, S: u8) @This() {
-            return .{
-                .pc = PC,
-                .sp = SP,
-                .a = A,
-                .x = X,
-                .y = Y,
-                .s = status.fromInt(S),
-                .cycles = 0,
-                .mem = undefined,
-                .currAddrMode = undefined,
-            };
+        pub fn init(console: *Console) @This() {
+            var cpu = @This(){ .console = console };
+            cpu.reset();
+            return cpu;
         }
 
         // Read/Write
-        pub fn memFetchByte(self: *@This()) u8 {
-            const data = self.mem[self.pc];
+        fn read(self: *@This(), addr: u16) u8 {
+            if (addr < 0x2000) {
+                return self.console.mem[addr % 0x0800];
+            }
+
+            return 0;
+        }
+
+        fn write(self: *@This(), addr: u16, val: u8) void {
+            if (addr < 0x2000) {
+                self.console.mem[addr % 0x0800] = val;
+            }
+        }
+
+        fn memFetchByte(self: *@This()) u8 {
+            const data = self.read(self.pc);
             self.pc +%= 1;
             self.cycles += 1;
 
@@ -136,7 +142,7 @@ pub fn nesCpu() type {
         }
 
         fn memReadByte(self: *@This(), addr: u16) u8 {
-            const data = self.mem[addr];
+            const data = self.read(addr);
             self.cycles += 1;
 
             return data;
@@ -157,7 +163,7 @@ pub fn nesCpu() type {
         }
 
         fn memWriteByte(self: *@This(), addr: u16, val: u8) void {
-            self.mem[addr] = val;
+            self.write(addr, val);
             self.cycles += 1;
         }
 
@@ -323,16 +329,7 @@ pub fn nesCpu() type {
 
         // FIXME
         pub fn ARR(self: *@This()) void {
-            const val = self.fetchOperand(self.fetchAddress());
-            //const carry: u8 = if (self.s.carry) 0x80 else 0x00;
-            //const carry: u8 = @intFromBool(self.s.carry);
-
-            std.debug.print("{b}\n", .{155});
-            self.a = ((self.a & val) >> 1) | 0x00;
-
-            self.s.carry = (self.a & 0x40) == 0x40;
-            self.s.overflow = ((self.a >> 5) & 0x01) ^ ((self.a >> 6) & 0x01) != 0;
-            self.setZeroNegative(self.a);
+            _ = self.fetchOperand(self.fetchAddress());
         }
 
         pub fn ANC(self: *@This()) void {
@@ -870,6 +867,31 @@ pub fn nesCpu() type {
             _ = self;
         }
 
+        pub fn IRQ(self: *@This()) void {
+            self.pushWord(self.pc + 1);
+            self.push(status.toInt(self.s) | 0x30);
+            self.s.interrupt = true;
+
+            self.pc = self.memReadFromWord(0xFFFE);
+            self.cycles += 1;
+        }
+
+        pub fn NMI(self: *@This()) void {
+            self.pushWord(self.pc + 1);
+            self.push(status.toInt(self.s) | 0x30);
+            self.s.interrupt = true;
+
+            self.pc = self.memReadFromWord(0xFFFA);
+            self.cycles += 1;
+        }
+
+        pub fn reset(self: *@This()) void {
+            self.pc = self.memReadFromWord(0xFFFC);
+            self.sp = 0xFD;
+            self.s = status.fromInt(0x24);
+            self.cycles += 1;
+        }
+
         // Misc
         fn checkPageCrossed(valA: u16, valB: u8) bool {
             return ((valA +% valB) & 0xFF00) != (valA & 0xFF00);
@@ -881,7 +903,7 @@ pub fn nesCpu() type {
 
         fn push(self: *@This(), val: u8) void {
             const addr = @as(u16, self.sp) + 0x100;
-            self.mem[addr] = val;
+            self.write(addr, val);
 
             self.sp -%= 1;
             self.cycles += 1;
