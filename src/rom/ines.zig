@@ -1,4 +1,4 @@
-// Copyright 2023 समीर सिंह Sameer Singh
+// Copyright 2023-2024 समीर सिंह Sameer Singh
 
 // This file is part of BITmes.
 // BITmes is free software: you can redistribute it and/or modify
@@ -23,11 +23,11 @@ const Byte6 = packed struct(u8) {
     fourScreen: bool,
     mapperNum: u4,
 
-    pub fn fromInt(num: u8) Byte6 {
+    fn fromInt(num: u8) @This() {
         return @bitCast(num);
     }
 
-    pub fn toInt(s: Byte6) u8 {
+    fn toInt(s: @This()) u8 {
         return @bitCast(s);
     }
 };
@@ -44,11 +44,11 @@ const Byte7 = packed struct(u8) {
     iNes2Identifer: u2,
     mapperNum: u4,
 
-    pub fn fromInt(num: u8) Byte7 {
+    fn fromInt(num: u8) @This() {
         return @bitCast(num);
     }
 
-    pub fn toInt(s: Byte7) u8 {
+    fn toInt(s: @This()) u8 {
         return @bitCast(s);
     }
 };
@@ -56,35 +56,39 @@ const Byte7 = packed struct(u8) {
 const Byte8 = packed struct(u8) {
     mapperNum: u4,
     subMapperNum: u4,
+
+    fn fromInt(num: u8) @This() {
+        return @bitCast(num);
+    }
+
+    fn toInt(s: @This()) u8 {
+        return @bitCast(s);
+    }
 };
 
 pub fn loadiNes() type {
     return struct {
-        isINes2: bool,
-        prgRomSize: u32,
-        chrRomSize: u32,
-        byte6: Byte6,
-        byte7: Byte7,
-        byte8: Byte8,
+        isINes2: bool = false,
+        prgRomSize: u32 = undefined,
+        chrRomSize: u32 = undefined,
+        byte6: Byte6 = undefined,
+        byte7: Byte7 = undefined,
+        byte8: Byte8 = undefined,
         romData: []u8,
 
         pub fn init(fileContent: []u8) @This() {
-            return .{
-                .isINes2 = undefined,
-                .prgRomSize = undefined,
-                .chrRomSize = undefined,
-                .byte6 = undefined,
-                .byte7 = undefined,
-                .byte8 = undefined,
-                .romData = fileContent,
-            };
+            var iNes = @This(){ .romData = fileContent };
+            iNes.byte6 = Byte6.fromInt(iNes.romData[6]);
+            iNes.byte7 = Byte7.fromInt(iNes.romData[7]);
+            iNes.byte8 = Byte8.fromInt(iNes.romData[8]);
+            iNes.isINes2 = iNes.byte7.iNes2Identifer == 2;
+            iNes.getPrgRomSize();
+            iNes.getChrRomSize();
+
+            return iNes;
         }
 
-        pub fn ifINes2(self: *@This()) void {
-            self.isINes2 = self.byte7.iNes2Identifer == 2;
-        }
-
-        pub fn getPrgRomSize(self: *@This()) void {
+        fn getPrgRomSize(self: *@This()) void {
             const prgLo = self.romData[4];
             const prgHi: u16 = self.romData[9];
 
@@ -106,7 +110,7 @@ pub fn loadiNes() type {
             }
         }
 
-        pub fn getChrRomSize(self: *@This()) void {
+        fn getChrRomSize(self: *@This()) void {
             const chrLo = self.romData[5];
             const chrHi: u16 = self.romData[9];
 
@@ -122,18 +126,6 @@ pub fn loadiNes() type {
             } else {
                 self.chrRomSize = @as(u32, @intCast(chrLo)) * 0x2000;
             }
-        }
-
-        pub fn setByte6(self: *@This()) void {
-            self.byte6 = Byte6.fromInt(self.romData[6]);
-        }
-
-        pub fn setByte7(self: *@This()) void {
-            self.byte7 = Byte7.fromInt(self.romData[7]);
-        }
-
-        pub fn setByte8(self: *@This()) void {
-            self.byte8 = Byte8.fromInt(self.romData[8]);
         }
     };
 }

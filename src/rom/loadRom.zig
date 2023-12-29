@@ -1,4 +1,4 @@
-// Copyright 2023 समीर सिंह Sameer Singh
+// Copyright 2023-2024 समीर सिंह Sameer Singh
 
 // This file is part of BITmes.
 // BITmes is free software: you can redistribute it and/or modify
@@ -17,31 +17,44 @@
 const std = @import("std");
 const ines = @import("ines.zig");
 
-fn loadRom(romPath: []const u8) !void {
-    var romFile = try std.fs.cwd().openFile(romPath, .{});
-    defer romFile.close();
+const Allocator = std.mem.Allocator;
 
-    const metadata = try romFile.metadata();
+pub const Cartridge = struct {
+    prg: []u8,
+    chr: []u8,
+    mapper: u12,
+    contents: []u8,
+    allocator: Allocator,
 
-    var buffer: [2000 * 1024]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const allocator = fba.allocator();
+    pub fn init(allocator: Allocator, romPath: []const u8) !@This() {
+        var romFile = try std.fs.cwd().openFile(romPath, .{});
+        defer romFile.close();
 
-    const contents = try romFile.reader().readAllAlloc(
-        allocator,
-        metadata.inner.statx.size,
-    );
-    defer allocator.free(contents);
+        const metadata = try romFile.metadata();
 
-    if (std.mem.eql(u8, contents[0..4], "NES\x1a")) {
-        var iNes = ines.loadiNes().init(contents[0..15]);
-        iNes.setByte6();
-        iNes.setByte7();
-        iNes.ifINes2();
-        iNes.getPrgRomSize();
-        iNes.getChrRomSize();
-        std.debug.print("chr: {}\n", .{iNes.byte6});
-    } else {
-        std.debug.print("Unsupported ROM file format.\n", .{});
+        const contents = try romFile.reader().readAllAlloc(
+            allocator,
+            metadata.inner.statx.size,
+        );
+
+        if (std.mem.eql(u8, contents[0..4], "NES\x1a")) {
+            const headerData = ines.loadiNes().init(contents[0..15]);
+
+            const prg = contents[16 .. headerData.prgRomSize + 16];
+            const chr = contents[headerData.prgRomSize + 16 .. headerData.prgRomSize + headerData.chrRomSize + 16];
+
+            const mapper0 = headerData.byte6.mapperNum;
+            const mapper1: u8 = headerData.byte7.mapperNum;
+            const mapper2: u12 = headerData.byte8.mapperNum;
+            const mapper = ((mapper2 << 8) | (mapper1 << 4)) | mapper0;
+
+            return @This(){ .prg = prg, .chr = chr, .mapper = mapper, .contents = contents, .allocator = allocator };
+        } else {
+            return error.InvalidFileFormat;
+        }
     }
-}
+
+    pub fn deinit(self: *@This()) void {
+        self.allocator.free(self.contents);
+    }
+};

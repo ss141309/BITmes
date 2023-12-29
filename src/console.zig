@@ -15,8 +15,22 @@
 // along with BITmes. If not, see <https:www.gnu.org/licenses/>.
 
 const Cpu = @import("cpu.zig").nesCpu;
+const Cartridge = @import("rom/loadRom.zig").Cartridge;
+const std = @import("std");
 
 pub const Console = struct {
+    cartridge: Cartridge = undefined,
     cpu: Cpu() = undefined,
     mem: [2048]u8 = undefined,
 };
+
+pub fn main() !void {
+    var buffer: [2000 * 1024]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
+
+    var console = Console{};
+    console.cartridge = try Cartridge.init(allocator, "/home/ss141309/Downloads/donkey-kong.nes");
+    defer console.cartridge.deinit();
+    console.cpu = Cpu().init(&console);
+}
